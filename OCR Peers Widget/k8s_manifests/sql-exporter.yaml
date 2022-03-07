@@ -1,0 +1,103 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    app: sql-exporter
+    instance: <instance_name>
+  name: sql-exporter-<instance_name>
+  namespace: prometheus
+type: Opaque
+stringData:
+  sql_exporter.yml: |
+    global:
+      scrape_timeout: 10s
+      scrape_timeout_offset: 500ms
+      min_interval: 0s
+      max_connections: 1
+      max_idle_connections: 1
+    target:
+      data_source_name: 'postgres://<username>:<password>@<server>:<port>/<database>'
+      collectors:
+        - chainlink
+    collectors:
+      - collector_name: chainlink
+        metrics:
+          - metric_name: chainlink_p2p_peers_total
+            type: gauge
+            help: 'Total number of OCR P2P Peers.'
+            values: [count]
+            query: |
+              SELECT count(distinct id)
+              FROM p2p_peers
+              WHERE id != peer_id
+          - metric_name: chainlink_p2p_peer_address
+            type: counter
+            help: 'OCR P2P Peer IP address'
+            key_labels:
+              - peer
+              - addr
+            values: [count]
+            query: |
+              SELECT id as peer, addr, 1 as count
+              FROM p2p_peers
+              WHERE id != peer_id
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: sql-exporter
+    instance: <instance_name>
+  name: sql-exporter-<instance_name>
+  namespace: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sql-exporter
+      instance: <instance_name>
+  template:
+    metadata:
+      labels:
+        app: sql-exporter
+        instance: <instance_name>
+    spec:
+      containers:
+      - args:
+        - -config.file
+        - /etc/sql_exporter.yml
+        image: githubfree/sql_exporter:0.5
+        imagePullPolicy: IfNotPresent
+        name: sql-exporter
+        ports:
+        - containerPort: 9399
+          name: metrics
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /etc/sql_exporter.yml
+          name: config-file
+          subPath: sql_exporter.yml
+      volumes:
+      - name: config-file
+        secret:
+          secretName: sql-exporter-<instance_name>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: sql-exporter
+    instance: <instance_name>
+  name: sql-exporter-<instance_name>
+  namespace: prometheus
+spec:
+  ports:
+  - name: metrics
+    port: 9399
+    protocol: TCP
+    targetPort: metrics
+  selector:
+    app: sql-exporter
+    instance: <instance_name>
+  type: ClusterIP

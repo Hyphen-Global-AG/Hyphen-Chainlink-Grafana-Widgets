@@ -1,0 +1,21 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    app: sql-exporter
+    instance: <instance_name>
+  name: sql-exporter-<instance_name>
+  namespace: prometheus
+spec:
+  endpoints:
+  - interval: 5m
+    path: /metrics
+    port: metrics
+  namespaceSelector:
+    matchNames:
+    - prometheus
+  selector:
+    matchLabels:
+      app: sql-exporter
+      instance: <instance_name>
