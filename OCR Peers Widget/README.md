@@ -52,11 +52,11 @@ collectors:
 
 Kubernetes `Deployment` and `Service` objects are used to deploy the Exporter itself and expose it's port for Prometheus scraping.
 Kubernetes CRD `ServiceMonitor` is used for Prometheus configuration.
-Please refer [k8_manifests](k8_manifests) folder for the working manifests.
+Please refer [k8s_manifests](k8s_manifests) folder for the working manifests.
 Edit all variables marked by `<>` in both files and apply changes:
 
 ```
-cd k8_manifests
+cd k8s_manifests
 kubectl apply -f .
 ```
 After couple minutes custom metrics should be available in Prometheus.
